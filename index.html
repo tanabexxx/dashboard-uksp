@@ -159,21 +159,108 @@ footer { text-align: center; padding: 20px; color: var(--muted); font-size: 12px
 <footer>Dashboard prototaip UKSP / PKSP · Data contoh sahaja</footer>
 
 <script>
-const data = [
-  {tahun:2026, bulan:"Ogos", klinik:"KK Manir", kategori:"Bantuan", bil:5, intervensi:"Bantuan peralatan", status:"Dalam tindakan"},
-  {tahun:2026, bulan:"Ogos", klinik:"KK Cendering", kategori:"Terapi sokongan", bil:3, intervensi:"Kaunseling sokongan", status:"Selesai"},
-  {tahun:2026, bulan:"September", klinik:"KK Manir", kategori:"Bantuan", bil:7, intervensi:"Bantuan peralatan", status:"Dalam tindakan"}
-];
+let data = [];
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQgNDOo-DQxQAZ1ucoY2i0BxfnC7xK750mU7lhv1gBUJw-VNfOyaZZfvB-TolCYzJ1fvo3eqK8DOWdF/pub?gid=0&single=true&output=csv";
 
 const yearSelect = document.getElementById("year");
-[...new Set(data.map(d => d.tahun))].forEach(y => {
-  const option = document.createElement("option");
-  option.value = y;
-  option.textContent = y;
-  yearSelect.appendChild(option);
-});
 
-function render() {
+
+
+function parseCSV(text) {
+  text = text.replace(/^\uFEFF/, "");
+
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (ch === '"') {
+      if (quoted && text[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (ch === "," && !quoted) {
+      row.push(field.trim());
+      field = "";
+    } else if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+
+      row.push(field.trim());
+
+      if (row.some(v => v !== "")) rows.push(row);
+
+      row = [];
+      field = "";
+    } else {
+      field += ch;
+    }
+  }
+
+  if (field !== "" || row.length > 0) {
+    row.push(field.trim());
+    if (row.some(v => v !== "")) rows.push(row);
+  }
+
+  if (rows.length < 2) return [];
+
+  const headers = rows.shift().map(h => h.trim());
+
+  return rows.map(values => {
+    const item = {};
+
+    headers.forEach((header, i) => {
+      item[header] = (values[i] || "").trim();
+    });
+
+    return {
+      tahun: Number(item["Tahun"]),
+      bulan: item["Bulan"],
+      klinik: item["Klinik"],
+      kategori: item["Kategori Kes"],
+      bil: Number(item["Bilangan Kes"]) || 0,
+      intervensi: item["Jenis Intervensi"],
+      status: item["Status Kes"]
+    };
+  }).filter(item => item.klinik);
+}
+
+async function loadData() {
+  try {
+    const response = await fetch(csvUrl);
+
+    if (!response.ok) {
+      throw new Error("Gagal membaca Google Sheets");
+    }
+
+    const csvText = await response.text();
+    data = parseCSV(csvText);
+
+    yearSelect.innerHTML = '<option value="all">Semua tahun</option>';
+
+    [...new Set(data.map(d => d.tahun).filter(Boolean))]
+      .sort((a, b) => a - b)
+      .forEach(y => {
+        const option = document.createElement("option");
+        option.value = y;
+        option.textContent = y;
+        yearSelect.appendChild(option);
+      });
+
+    render();
+
+  } catch (error) {
+    console.error("Ralat memuatkan data:", error);
+    document.getElementById("chart").textContent =
+      "Data tidak dapat dimuatkan. Sila semak pautan Google Sheets.";
+  }
+}
+
+  function render() {
   const year = yearSelect.value;
   const month = document.getElementById("month").value;
   const filtered = data.filter(d =>
@@ -215,7 +302,7 @@ document.getElementById("reset").addEventListener("click", () => {
   document.getElementById("month").value = "all";
   render();
 });
-render();
+loadData();
 </script>
 </body>
 </html>
