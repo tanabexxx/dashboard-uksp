@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard UKSP | PKD Kuala Terengganu</title>
+<style>
+:root {
+  --green: #087f70;
+  --dark: #123b37;
+  --bg: #f2f7f6;
+  --white: #ffffff;
+  --muted: #687b78;
+  --border: #dce8e5;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--dark);
+  background: var(--bg);
+}
+header {
+  background: var(--dark);
+  color: white;
+  padding: 25px 6%;
+}
+header small { color: #b8ddd5; }
+header h1 { margin: 8px 0; font-size: 27px; }
+header p { margin-bottom: 0; color: #d4e7e3; }
+main { max-width: 1200px; margin: auto; padding: 25px 18px; }
+.filters, .card, .panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+}
+.filters {
+  display: flex;
+  gap: 15px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+select {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  min-width: 150px;
+  background: white;
+}
+button {
+  background: var(--green);
+  color: white;
+  border: 0;
+  border-radius: 7px;
+  padding: 11px 16px;
+  cursor: pointer;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.card small { color: var(--muted); }
+.number { font-size: 32px; font-weight: bold; margin-top: 12px; }
+.panel { margin-bottom: 20px; }
+.panel h2 { font-size: 18px; margin-top: 0; }
+.chart { display: flex; flex-direction: column; gap: 16px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 35px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.track { height: 20px; background: #e8f1ef; border-radius: 5px; overflow: hidden; }
+.bar { height: 100%; background: var(--green); border-radius: 5px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: #f2f7f6; }
+footer { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+@media(max-width: 650px) {
+  .cards { grid-template-columns: 1fr; }
+  header h1 { font-size: 22px; }
+  .bar-row { grid-template-columns: 95px 1fr 25px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <small>PEJABAT KESIHATAN DAERAH KUALA TERENGGANU</small>
+  <h1>Dashboard UKSP / PKSP</h1>
+  <p>Ringkasan statistik perkhidmatan kerja sosial perubatan</p>
+</header>
+
+<main>
+  <section class="filters">
+    <div>
+      <label for="year">Tahun</label>
+      <select id="year"><option value="all">Semua tahun</option></select>
+    </div>
+    <div>
+      <label for="month">Bulan</label>
+      <select id="month">
+        <option value="all">Semua bulan</option>
+        <option>Januari</option><option>Februari</option>
+        <option>Mac</option><option>April</option>
+        <option>Mei</option><option>Jun</option>
+        <option>Julai</option><option>Ogos</option>
+        <option>September</option><option>Oktober</option>
+        <option>November</option><option>Disember</option>
+      </select>
+    </div>
+    <button id="reset">Set semula penapis</button>
+  </section>
+
+  <section class="cards">
+    <div class="card">
+      <small>Jumlah Kes</small>
+      <div class="number" id="total">0</div>
+    </div>
+    <div class="card">
+      <small>Bilangan Klinik</small>
+      <div class="number" id="clinics">0</div>
+    </div>
+    <div class="card">
+      <small>Kategori Kes</small>
+      <div class="number" id="categories">0</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Bilangan Kes Mengikut Klinik</h2>
+    <div id="chart" class="chart"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Rekod Statistik</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tahun</th><th>Bulan</th><th>Klinik</th>
+            <th>Kategori</th><th>Bil. Kes</th>
+            <th>Intervensi</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>Dashboard prototaip UKSP / PKSP · Data contoh sahaja</footer>
+
+<script>
+const data = [
+  {tahun:2026, bulan:"Ogos", klinik:"KK Manir", kategori:"Bantuan", bil:5, intervensi:"Bantuan peralatan", status:"Dalam tindakan"},
+  {tahun:2026, bulan:"Ogos", klinik:"KK Cendering", kategori:"Terapi sokongan", bil:3, intervensi:"Kaunseling sokongan", status:"Selesai"},
+  {tahun:2026, bulan:"September", klinik:"KK Manir", kategori:"Bantuan", bil:7, intervensi:"Bantuan peralatan", status:"Dalam tindakan"}
+];
+
+const yearSelect = document.getElementById("year");
+[...new Set(data.map(d => d.tahun))].forEach(y => {
+  const option = document.createElement("option");
+  option.value = y;
+  option.textContent = y;
+  yearSelect.appendChild(option);
+});
+
+function render() {
+  const year = yearSelect.value;
+  const month = document.getElementById("month").value;
+  const filtered = data.filter(d =>
+    (year === "all" || String(d.tahun) === year) &&
+    (month === "all" || d.bulan === month)
+  );
+
+  const total = filtered.reduce((sum, d) => sum + d.bil, 0);
+  document.getElementById("total").textContent = total;
+  document.getElementById("clinics").textContent =
+    new Set(filtered.map(d => d.klinik)).size;
+  document.getElementById("categories").textContent =
+    new Set(filtered.map(d => d.kategori)).size;
+
+  const counts = {};
+  filtered.forEach(d => counts[d.klinik] = (counts[d.klinik] || 0) + d.bil);
+  const max = Math.max(1, ...Object.values(counts));
+  document.getElementById("chart").innerHTML =
+    Object.entries(counts).map(([name, value]) => `
+      <div class="bar-row">
+        <span>${name}</span>
+        <div class="track"><div class="bar" style="width:${value/max*100}%"></div></div>
+        <strong>${value}</strong>
+      </div>`).join("") || "Tiada data untuk pilihan ini.";
+
+  document.getElementById("rows").innerHTML =
+    filtered.map(d => `<tr>
+      <td>${d.tahun}</td><td>${d.bulan}</td><td>${d.klinik}</td>
+      <td>${d.kategori}</td><td>${d.bil}</td>
+      <td>${d.intervensi}</td><td>${d.status}</td>
+    </tr>`).join("") ||
+    '<tr><td colspan="7">Tiada rekod.</td></tr>';
+}
+
+yearSelect.addEventListener("change", render);
+document.getElementById("month").addEventListener("change", render);
+document.getElementById("reset").addEventListener("click", () => {
+  yearSelect.value = "all";
+  document.getElementById("month").value = "all";
+  render();
+});
+render();
+</script>
+</body>
+</html>
